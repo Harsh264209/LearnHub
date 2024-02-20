@@ -332,7 +332,7 @@ const razorpayPaymentController = async (req, res) => {
     });
 
     // Extract only necessary data from cart items
-    const reducedCart = cart.map(({ id, title, price }) => ({ id, title, price }));
+    const reducedCart = cart.map(({ _id, title, price }) => ({ _id, title, price }));
 
     // Check if an order for the same cart items already exists
     const existingOrder = await Order.findOne({ products: reducedCart, buyer: req.user.userId });
