@@ -194,63 +194,188 @@ const getCoursesByCategory = async (req, res) => {
 
   }
 
-  const razorpay = new Razorpay({
-    key_id: process.env.razorpay_key_id,
-    key_secret: process.env.razorpay_key_secret
-  });
+  // const razorpay = new Razorpay({
+  //   key_id: process.env.razorpay_key_id,
+  //   key_secret: process.env.razorpay_key_secret
+  // });
 
+
+// const razorpayPaymentController = async (req, res) => {
+//   try {
+//       const { amount, cart } = req.body;
+//       let total = 0;
+//       cart.forEach((item) => {
+//           total += item.price;
+//       });
+
+//       // Check if an order for the same cart items already exists
+//       const existingOrder = await Order.findOne({ products: cart, buyer: req.user.userId }).select("-img");
+
+//       if (existingOrder) {
+//           // Return the existing order
+//           return res.json({ orderDetails: existingOrder });
+//       }
+
+//       // Create options for Razorpay order
+//       const options = {
+//           amount: total * 100,
+//           currency: 'INR',
+//           receipt: `receipt_order_${Date.now()}`,
+//           payment_capture: 1
+//       };
+
+//       // Create Razorpay order
+//       razorpay.orders.create(options, async function (error, order) {
+//           if (error) {
+//               console.error(error);
+//               return res.status(500).send(error);
+//           } else {
+//               // Save the order details in your database
+//               try {
+//                   const orderDetails = new Order({
+//                       products: cart,
+//                       payment: order,
+//                       buyer: req.user.userId
+//                   });
+//                   await orderDetails.save();
+//                   return res.json({ orderDetails });
+//               } catch (error) {
+//                   console.error(error);
+//                   return res.status(500).send(error);
+//               }
+//           }
+//       });
+//   } catch (error) {
+//       console.error(error);
+//       return res.status(500).send(error);
+//   }
+// };
+
+
+// const razorpay = new Razorpay({
+//   key_id: process.env.razorpay_key_id,
+//   key_secret: process.env.razorpay_key_secret
+// });
+
+// const razorpayPaymentController = async (req, res) => {
+//   try {
+//       const { amount, cart } = req.body;
+//       let total = 0;
+      
+//       // Create a new cart without the image data
+//       const cartWithoutImages = cart.map(item => ({
+//           id: item.id,
+//           title: item.title,
+//           price: item.price
+//       }));
+
+//       // Calculate the total price of items in the cart
+//       cartWithoutImages.forEach((item) => {
+//           total += item.price;
+//       });
+
+//       // Check if an order for the same cart items already exists
+//       const existingOrder = await Order.findOne({ products: cartWithoutImages, buyer: req.user.userId });
+
+//       if (existingOrder) {
+//           // Return the existing order
+//           return res.json({ orderDetails: existingOrder });
+//       }
+
+//       // Create options for Razorpay order
+//       const options = {
+//           amount: total * 100,
+//           currency: 'INR',
+//           receipt: `receipt_order_${Date.now()}`,
+//           payment_capture: 1
+//       };
+
+//       // Create Razorpay order
+//       razorpay.orders.create(options, async function (error, order) {
+//           if (error) {
+//               console.error(error);
+//               return res.status(500).send(error);
+//           } else {
+//               // Save the order details in your database
+//               try {
+//                   const orderDetails = new Order({
+//                       products: cartWithoutImages,
+//                       payment: order,
+//                       buyer: req.user.userId
+//                   });
+//                   await orderDetails.save();
+//                   return res.json({ orderDetails });
+//               } catch (error) {
+//                   console.error(error);
+//                   return res.status(500).send(error);
+//               }
+//           }
+//       });
+//   } catch (error) {
+//       console.error(error);
+//       return res.status(500).send(error);
+//   }
+// };
+
+
+const razorpay = new Razorpay({
+  key_id: process.env.razorpay_key_id,
+  key_secret: process.env.razorpay_key_secret
+});
 
 const razorpayPaymentController = async (req, res) => {
   try {
-      const { amount, cart } = req.body;
-      let total = 0;
-      cart.forEach((item) => {
-          total += item.price;
-      });
+    const { amount, cart } = req.body;
+    let total = 0;
+    cart.forEach((item) => {
+      total += item.price;
+    });
 
-      // Check if an order for the same cart items already exists
-      const existingOrder = await Order.findOne({ products: cart, buyer: req.user.userId });
+    // Extract only necessary data from cart items
+    const reducedCart = cart.map(({ id, title, price }) => ({ id, title, price }));
 
-      if (existingOrder) {
-          // Return the existing order
-          return res.json({ orderDetails: existingOrder });
+    // Check if an order for the same cart items already exists
+    const existingOrder = await Order.findOne({ products: reducedCart, buyer: req.user.userId });
+
+    if (existingOrder) {
+      // Return the existing order
+      return res.json({ orderDetails: existingOrder });
+    }
+
+    // Create options for Razorpay order
+    const options = {
+      amount: total * 100,
+      currency: 'INR',
+      receipt: `receipt_order_${Date.now()}`,
+      payment_capture: 1
+    };
+
+    // Create Razorpay order
+    razorpay.orders.create(options, async function (error, order) {
+      if (error) {
+        console.error(error);
+        return res.status(500).send(error);
+      } else {
+        // Save the order details in your database
+        try {
+          const orderDetails = new Order({
+            products: reducedCart, // Save the reduced cart data
+            payment: order,
+            buyer: req.user.userId
+          });
+          await orderDetails.save();
+          return res.json({ orderDetails });
+        } catch (error) {
+          console.error(error);
+          return res.status(500).send(error);
+        }
       }
-
-      // Create options for Razorpay order
-      const options = {
-          amount: total * 100,
-          currency: 'INR',
-          receipt: `receipt_order_${Date.now()}`,
-          payment_capture: 1
-      };
-
-      // Create Razorpay order
-      razorpay.orders.create(options, async function (error, order) {
-          if (error) {
-              console.error(error);
-              return res.status(500).send(error);
-          } else {
-              // Save the order details in your database
-              try {
-                  const orderDetails = new Order({
-                      products: cart,
-                      payment: order,
-                      buyer: req.user.userId
-                  });
-                  await orderDetails.save();
-                  return res.json({ orderDetails });
-              } catch (error) {
-                  console.error(error);
-                  return res.status(500).send(error);
-              }
-          }
-      });
+    });
   } catch (error) {
-      console.error(error);
-      return res.status(500).send(error);
+    console.error(error);
+    return res.status(500).send(error);
   }
 };
-
 
 
 
